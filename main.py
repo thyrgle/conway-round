@@ -24,7 +24,7 @@ def construct_graph_from_genome(genome):
 
 def adjust(genome, delta=0.001):
     results = []
-    TRIALS = 100
+    TRIALS = 10
     for _ in range(TRIALS):
         g = construct_graph_from_genome(genome)
         results.append((*score(g), g))
@@ -38,16 +38,16 @@ def create_genome():
 
 
 def main():
-    genomes = create_genome()
+    genome = create_genome()
     best_avg_score = float('inf')
     min_score = float('inf')
     while min_score != 0:
-        for genome in genomes:
-            genome, results = adjust(genome)
-            scores, _, _ = zip(*results)
-            if mean(scores) < best_avg_score:
-                best_avg_score = mean(scores)
-                print(best_avg_score)
+        genome, results = adjust(genome)
+        scores, _, _ = zip(*results)
+        if mean(scores) < best_avg_score:
+            best_avg_score = mean(scores)
+            min_score = min(scores)
+            print(min_score, best_avg_score)
 
 
 if __name__ == "__main__":
