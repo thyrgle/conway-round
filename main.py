@@ -4,7 +4,7 @@ from statistics import mean
 
 
 NODES = 9
-EDGES = 4
+
 
 np.set_printoptions(precision=3)
 
@@ -22,18 +22,15 @@ def construct_graph_from_genome(genome):
     return nx.from_numpy_array(g_mat)
 
 
-def adjust(genome, delta=0.000001):
+def adjust(genome, delta=0.001):
     results = []
-    TRIALS = 10
+    TRIALS = 100
     for _ in range(TRIALS):
         g = construct_graph_from_genome(genome)
         results.append((*score(g), g))
     for _, defects, g in results:
-        genome = np.clip(genome + defects * delta)
-    return *min(results, key=lambda x: x[0]), \
-           mean([r[0] for r in results]), \
-           max(results, key=lambda x: x[0]), \
-           genome
+        genome = np.clip(genome + defects * delta, 0, 1)
+    return genome, results
 
 
 def create_genome():
@@ -41,15 +38,16 @@ def create_genome():
 
 
 def main():
-    genome = create_genome()
-    score = float('inf')
-    best_score = float('inf')
+    genomes = create_genome()
+    best_avg_score = float('inf')
     min_score = float('inf')
     while min_score != 0:
-        min_score, _, _, score, _, genome = adjust(genome)
-        if score < best_score:
-            best_score = score
-            print(min_score, score)
+        for genome in genomes:
+            genome, results = adjust(genome)
+            scores, _, _ = zip(*results)
+            if mean(scores) < best_avg_score:
+                best_avg_score = mean(scores)
+                print(best_avg_score)
 
 
 if __name__ == "__main__":
