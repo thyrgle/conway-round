@@ -3,7 +3,7 @@ import numpy as np
 from statistics import mean
 
 
-NODES = 9
+NODES = 99
 
 
 np.set_printoptions(precision=3)
@@ -30,7 +30,7 @@ def adjust(genome, delta=0.001):
         results.append((*score(g), g))
     for _, defects, g in results:
         genome = np.clip(genome + defects * delta, 0, 1)
-    return genome, results
+    return genome, *zip(*results)
 
 
 def create_genome():
@@ -42,8 +42,7 @@ def main():
     best_avg_score = float('inf')
     min_score = float('inf')
     while min_score != 0:
-        genome, results = adjust(genome)
-        scores, _, _ = zip(*results)
+        genome, scores, _, graphs = adjust(genome)
         if mean(scores) < best_avg_score:
             best_avg_score = mean(scores)
             min_score = min(scores)
