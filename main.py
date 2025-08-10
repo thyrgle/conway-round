@@ -21,38 +21,42 @@ def construct_graph_from_genome(genome):
     g = g + g.T
     return g
 
-
-def adjust(genome, delta1=1, delta2=1):
+def search(genome, delta=0.01):
     trial_results = []
-    TRIALS = 10
-    pair_count = NODES * (NODES - 1) / 2
-    # Max uncertainty when all values are 0.5. Normalized this to 1.
-    uncertainty = np.minimum(1 - genome, genome).sum() / (pair_count / 2)
-    certainty = 1 - uncertainty
+    TRIALS = 100
     for _ in range(TRIALS):
         g = construct_graph_from_genome(genome)
         s, defects = score(g)
         trial_results.append((s, g, defects))
     for s, g, defects in trial_results:
         up_g = np.tri(NODES, NODES, -1).T * (2 * g - 1)
-        genome = np.clip(
-            genome + up_g * (1 / s) * delta1 * uncertainty, 0, 1
-        )
+        genome = np.clip(genome + up_g * (1 / s) * delta, 0, 1)
+    return genome, \
+           *min(trial_results, key=lambda x: x[0])
+
+
+
+def adjust(genome, delta=0.00001):
+    trial_results = []
+    TRIALS = 10
+    for _ in range(TRIALS):
+        g = construct_graph_from_genome(genome)
+        s, defects = score(g)
+        trial_results.append((s, g, defects))
+    for s, g, defects in trial_results:
         apply = np.logical_or(
-            np.logical_and(defects < 0, g == 1),
-            np.logical_and(defects > 0, g == 0)).astype(int)
-        genome = np.clip(
-            genome + apply * defects * (1 / s) * delta2 * certainty, 0, 1
-        )
+            np.logical_and(defects < 0, genome > 0.5),
+            np.logical_and(defects > 0, genome <= 0.5)).astype(int)
+        genome = np.clip(genome + apply * defects * (1 / s) * delta, 0, 1)
         for u, v, k in combinations(range(NODES), 3):
-            genome[u, k] = np.clip(
-                genome[u, k] + apply[u, k] * defects[u, v] * (1 / s) *
-                delta2, 0, 1
-            )
-            genome[v, k] = np.clip(
-                genome[v, k] + apply[v, k] * defects[u, v] * (1 / s) *
-                delta2, 0, 1
-            )
+                genome[u, k] = np.clip(
+                    genome[u, k] + apply[u, k] * defects[u, v] * (1 / s) *
+                    delta, 0, 1
+                )
+                genome[v, k] = np.clip(
+                    genome[v, k] + apply[v, k] * defects[u, v] * (1 / s) *
+                    delta, 0, 1
+                )
     return genome, \
            *min(trial_results, key=lambda x: x[0])
 
@@ -65,13 +69,31 @@ def main():
     genome = create_genome()
     best_score = float('inf')
     best_graph = None
+    pairs = NODES * (NODES - 1) / 2
+    CERTAINTY_UPPER_BOUND = 0.99
+    CERTAINTY_LOWER_BOUND = 0.7
+    # Have a certainty score (unlikelyness to change) normalized so that 0.5
+    # in all entries is 1 and no certainty is 0.
+    certainty = 1 - np.minimum(1 - genome, genome).sum() / (pairs / 2)
     while best_score != 0:
-        genome, score, graph, defects = adjust(genome)
-        if score < best_score:
-            best_score = score
-            best_graph = graph
-            print(best_score)
-        print(genome)
+        print("PHASE 1")
+        while certainty < CERTAINTY_UPPER_BOUND:
+            genome, score, graph, defects = search(genome)
+            certainty = 1 - np.minimum(1 - genome, genome).sum() / (pairs / 2)
+            if score < best_score:
+                best_score = score
+                best_graph = graph
+                print(best_score)
+                if best_score == 0:
+                    break 
+        print("PHASE 2")
+        while certainty > CERTAINTY_LOWER_BOUND:
+            genome, score, graph, defects = adjust(genome)
+            certainty = 1 - np.minimum(1 - genome, genome).sum() / (pairs / 2)
+            if score < best_score:
+                best_score = score
+                best_graph = graph
+                print(best_score)
     print(best_graph)
 
 
