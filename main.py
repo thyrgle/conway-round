@@ -1,5 +1,6 @@
 import numpy as np
 from itertools import combinations
+from copy import deepcopy
 
 
 NODES = 9
@@ -31,14 +32,13 @@ def search(genome, delta=0.01):
     for s, g, defects in trial_results:
         up_g = np.tri(NODES, NODES, -1).T * (2 * g - 1)
         genome = np.clip(genome + up_g * (1 / s) * delta, 0, 1)
-    return genome, \
-           *min(trial_results, key=lambda x: x[0])
+    return genome, *min(trial_results, key=lambda x: x[0])
 
 
 
-def adjust(genome, delta=0.00001):
+def adjust(genome, delta=0.001):
     trial_results = []
-    TRIALS = 1000
+    TRIALS = 10
     for _ in range(TRIALS):
         g = construct_graph_from_genome(genome)
         s, defects = score(g)
@@ -47,18 +47,12 @@ def adjust(genome, delta=0.00001):
         apply = np.logical_or(
             np.logical_and(defects < 0, genome > 0.5),
             np.logical_and(defects > 0, genome <= 0.5)).astype(int)
-        genome = np.clip(genome + apply * defects * (1 / s) * delta, 0, 1)
+        d = defects * (1 / s) * delta
+        genome = np.clip(genome + apply * d, 0, 1)
         for u, v, k in combinations(range(NODES), 3):
-            genome[u, k] = np.clip(
-                genome[u, k] + apply[u, k] * defects[u, v] * (1 / s) * delta,
-                0, 1
-                )
-            genome[v, k] = np.clip(
-                genome[v, k] + apply[v, k] * defects[u, v] * (1 / s) * delta,
-                0, 1
-            )
-    return genome, \
-           *min(trial_results, key=lambda x: x[0])
+            genome[u, k] = np.clip(genome[u, k] + apply[u, k] * d[u, v], 0, 1)
+            genome[v, k] = np.clip(genome[v, k] + apply[v, k] * d[u, v], 0, 1)
+    return genome, *min(trial_results, key=lambda x: x[0])
 
 
 def create_genome():
@@ -66,14 +60,12 @@ def create_genome():
 
 
 def main():
-    genome = create_genome()
     best_score = float('inf')
     best_graph = None
+    genome = create_genome()
     pairs = NODES * (NODES - 1) / 2
-    CERTAINTY_UPPER_BOUND = 0.99
-    CERTAINTY_LOWER_BOUND = 0.7
-    # Have a certainty score (unlikelyness to change) normalized so that 0.5
-    # in all entries is 1 and no certainty is 0.
+    CERTAINTY_UPPER_BOUND = 0.999
+    CERTAINTY_LOWER_BOUND = 0.1
     certainty = 1 - np.minimum(1 - genome, genome).sum() / (pairs / 2)
     while best_score != 0:
         print("PHASE 1")
@@ -87,6 +79,7 @@ def main():
                 if best_score == 0:
                     break 
         print("PHASE 2")
+        genome = deepcopy(best_graph) * np.tri(NODES, NODES, -1).T
         while certainty > CERTAINTY_LOWER_BOUND:
             genome, score, graph, defects = adjust(genome)
             certainty = 1 - np.minimum(1 - genome, genome).sum() / (pairs / 2)
@@ -94,7 +87,6 @@ def main():
                 best_score = score
                 best_graph = graph
                 print(best_score)
-            print(genome)
     print(best_graph)
 
 
