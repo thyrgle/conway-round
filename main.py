@@ -1,9 +1,10 @@
 import numpy as np
 from itertools import combinations
-from copy import deepcopy
 
 
 NODES = 9
+PAIRS = NODES * (NODES - 1) / 2
+EDGES_PER_VERTEX = 4
 
 
 np.set_printoptions(precision=3)
@@ -55,38 +56,38 @@ def adjust(genome, delta=0.001):
     return genome, *min(trial_results, key=lambda x: x[0])
 
 
-def create_genome():
-    return np.tri(NODES, NODES, -1).T * 0.5
+def create_graph():
+    g = np.ones((NODES, NODES)) * (EDGES_PER_VERTEX / NODES)
+    np.fill_diagonal(g, 0)
+    return g
 
 
 def main():
     best_score = float('inf')
-    best_graph = None
-    genome = create_genome()
-    pairs = NODES * (NODES - 1) / 2
+    best_graph = create_graph()
     CERTAINTY_UPPER_BOUND = 0.999
     CERTAINTY_LOWER_BOUND = 0.1
-    certainty = 1 - np.minimum(1 - genome, genome).sum() / (pairs / 2)
+    certainty = 1 - np.minimum(1 - best_graph, best_graph).sum() / PAIRS
     while best_score != 0:
         print("PHASE 1")
+        genome = best_graph * np.tri(NODES, NODES, -1).T
+        while certainty > CERTAINTY_LOWER_BOUND:
+            genome, score, graph, defects = adjust(genome)
+            certainty = 1 - np.minimum(1 - genome, genome).sum() / (PAIRS / 2)
+            if score < best_score:
+                best_score = score
+                best_graph = graph
+                print(best_score)
+        print("PHASE 2")
         while certainty < CERTAINTY_UPPER_BOUND:
             genome, score, graph, defects = search(genome)
-            certainty = 1 - np.minimum(1 - genome, genome).sum() / (pairs / 2)
+            certainty = 1 - np.minimum(1 - genome, genome).sum() / (PAIRS / 2)
             if score < best_score:
                 best_score = score
                 best_graph = graph
                 print(best_score)
                 if best_score == 0:
                     break 
-        print("PHASE 2")
-        genome = deepcopy(best_graph) * np.tri(NODES, NODES, -1).T
-        while certainty > CERTAINTY_LOWER_BOUND:
-            genome, score, graph, defects = adjust(genome)
-            certainty = 1 - np.minimum(1 - genome, genome).sum() / (pairs / 2)
-            if score < best_score:
-                best_score = score
-                best_graph = graph
-                print(best_score)
     print(best_graph)
 
 
