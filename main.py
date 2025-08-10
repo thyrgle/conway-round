@@ -1,4 +1,5 @@
 import numpy as np
+from itertools import combinations
 
 
 NODES = 9
@@ -21,55 +22,39 @@ def construct_graph_from_genome(genome):
     return g
 
 
-def adjust(genome, delta1=0.05, delta2=0.1):
+def adjust(genome, delta1=1, delta2=1):
     trial_results = []
-    TRIALS = 100
-    for _ in range(TRIALS):
-        g = construct_graph_from_genome(genome)
-        s, defects = score(g)
-        trial_results.append((s, g, defects))
+    TRIALS = 10
     pair_count = NODES * (NODES - 1) / 2
     # Max uncertainty when all values are 0.5. Normalized this to 1.
     uncertainty = np.minimum(1 - genome, genome).sum() / (pair_count / 2)
     certainty = 1 - uncertainty
-    print(certainty)
+    for _ in range(TRIALS):
+        g = construct_graph_from_genome(genome)
+        s, defects = score(g)
+        trial_results.append((s, g, defects))
     for s, g, defects in trial_results:
         up_g = np.tri(NODES, NODES, -1).T * (2 * g - 1)
         genome = np.clip(
             genome + up_g * (1 / s) * delta1 * uncertainty, 0, 1
         )
-    for u in range(NODES):
-        for v in range(u+1, NODES):
-            if v > NODES:
-                continue
-            for k in range(NODES):
-                apply = np.logical_or(
-                    np.logical_and(defects < 0, genome > 0.5),
-                    np.logical_and(defects > 0, genome <= 0.5)).astype(int)
-                if k == v:
-                    continue
-                elif k == u:
-                    genome[u, v] = np.clip(
-                        genome[u, v] + apply[u, v] * defects[u, v] * \
-                        delta2 * certainty, 
-                        0, 1
-                    )
-                else:
-                    mi = min(u, k)
-                    ma = max(u, k)
-                    genome[mi, ma] = np.clip(
-                        genome[mi, ma] + apply[mi, ma] * defects[u, v] * \
-                        delta2 * certainty, 
-                        0, 1
-                    )
-                    mi = min(v, k)
-                    ma = max(v, k)
-                    genome[mi, ma] = np.clip(
-                        genome[mi, ma] + apply[mi, ma] * defects[u, v] * \
-                        delta2 * certainty, 
-                        0, 1
-                    )
-    return genome, *min(trial_results, key=lambda x: x[0])
+    apply = np.logical_or(
+        np.logical_and(defects < 0, genome > 0.5),
+        np.logical_and(defects > 0, genome <= 0.5)).astype(int)
+    genome = np.clip(
+        genome + apply * defects * (1 / s) * delta2 * certainty, 0, 1
+    )
+    for u, v, k in combinations(range(NODES), 3):
+        genome[u, k] = np.clip(
+            genome[u, k] + apply[u, k] * defects[u, v] * (1 / s) *
+            delta2, 0, 1
+        )
+        genome[v, k] = np.clip(
+            genome[v, k] + apply[v, k] * defects[u, v] * (1 / s) *
+            delta2, 0, 1
+        )
+    return genome, \
+           *min(trial_results, key=lambda x: x[0])
 
 
 def create_genome():
