@@ -23,7 +23,7 @@ def construct_graph_from_genome(genome):
 
 def search(genome, delta=0.01):
     trial_results = []
-    TRIALS = 100
+    TRIALS = 10
     for _ in range(TRIALS):
         g = construct_graph_from_genome(genome)
         s, defects = score(g)
@@ -38,7 +38,7 @@ def search(genome, delta=0.01):
 
 def adjust(genome, delta=0.00001):
     trial_results = []
-    TRIALS = 10
+    TRIALS = 1000
     for _ in range(TRIALS):
         g = construct_graph_from_genome(genome)
         s, defects = score(g)
@@ -49,14 +49,14 @@ def adjust(genome, delta=0.00001):
             np.logical_and(defects > 0, genome <= 0.5)).astype(int)
         genome = np.clip(genome + apply * defects * (1 / s) * delta, 0, 1)
         for u, v, k in combinations(range(NODES), 3):
-                genome[u, k] = np.clip(
-                    genome[u, k] + apply[u, k] * defects[u, v] * (1 / s) *
-                    delta, 0, 1
+            genome[u, k] = np.clip(
+                genome[u, k] + apply[u, k] * defects[u, v] * (1 / s) * delta,
+                0, 1
                 )
-                genome[v, k] = np.clip(
-                    genome[v, k] + apply[v, k] * defects[u, v] * (1 / s) *
-                    delta, 0, 1
-                )
+            genome[v, k] = np.clip(
+                genome[v, k] + apply[v, k] * defects[u, v] * (1 / s) * delta,
+                0, 1
+            )
     return genome, \
            *min(trial_results, key=lambda x: x[0])
 
@@ -94,6 +94,7 @@ def main():
                 best_score = score
                 best_graph = graph
                 print(best_score)
+            print(genome)
     print(best_graph)
 
 
