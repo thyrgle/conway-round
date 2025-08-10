@@ -21,7 +21,7 @@ def construct_graph_from_genome(genome):
     return g
 
 
-def adjust(genome, delta1=0.00001, delta2=0.001):
+def adjust(genome, delta1=0.05, delta2=0.1):
     trial_results = []
     TRIALS = 100
     for _ in range(TRIALS):
@@ -29,12 +29,14 @@ def adjust(genome, delta1=0.00001, delta2=0.001):
         s, defects = score(g)
         trial_results.append((s, g, defects))
     pair_count = NODES * (NODES - 1) / 2
-    uncertainty = np.minimum(1 - genome, genome).sum() / pair_count
+    # Max uncertainty when all values are 0.5. Normalized this to 1.
+    uncertainty = np.minimum(1 - genome, genome).sum() / (pair_count / 2)
     certainty = 1 - uncertainty
+    print(certainty)
     for s, g, defects in trial_results:
         up_g = np.tri(NODES, NODES, -1).T * (2 * g - 1)
         genome = np.clip(
-            genome + up_g * (1 / s) * delta1 * uncertainty, 0.2, 0.8
+            genome + up_g * (1 / s) * delta1 * uncertainty, 0, 1
         )
     for u in range(NODES):
         for v in range(u+1, NODES):
@@ -56,18 +58,17 @@ def adjust(genome, delta1=0.00001, delta2=0.001):
                     mi = min(u, k)
                     ma = max(u, k)
                     genome[mi, ma] = np.clip(
-                        genome[mi, ma] + apply[mi, ma] * defects[mi, ma] * \
+                        genome[mi, ma] + apply[mi, ma] * defects[u, v] * \
                         delta2 * certainty, 
                         0, 1
                     )
                     mi = min(v, k)
                     ma = max(v, k)
                     genome[mi, ma] = np.clip(
-                        genome[mi, ma] + apply[mi, ma] * defects[mi, ma] * \
+                        genome[mi, ma] + apply[mi, ma] * defects[u, v] * \
                         delta2 * certainty, 
                         0, 1
                     )
-    genome = np.tri(NODES, NODES, -1).T * genome
     return genome, *min(trial_results, key=lambda x: x[0])
 
 
