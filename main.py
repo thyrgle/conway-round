@@ -44,24 +44,50 @@ def adjust(genome, delta1=0.0005, delta2=0.1):
                 if k == v:
                     continue
                 elif k == u:
-                    genome[u, v] = np.clip(
-                        genome[u, v] + defects[u, v] * delta2 * certainty, 
-                        0, 1
-                    )
+                    if defects[u, v] < 0 and genome[u, v] > 0.5:
+                        genome[u, v] = np.clip(
+                            genome[u, v] + defects[u, v] * delta2 * certainty, 
+                            0, 1
+                        )
+                    elif defects[u, v] > 0 and genome[u, v] <= 0.5:
+                        genome[u, v] = np.clip(
+                            genome[u, v] + defects[u, v] * delta2 * certainty, 
+                            0, 1
+                        )
                 else:
-                    mi = min(u, k)
-                    ma = max(u, k)
-                    genome[mi, ma] = np.clip(
-                        genome[mi, ma] + defects[mi, ma] * delta2 * certainty, 
-                        0, 1
-                    )
+                    if defects[u, v] < 0 and genome[u, v] > 0.5:
+                        mi = min(u, k)
+                        ma = max(u, k)
+                        genome[mi, ma] = np.clip(
+                            genome[mi, ma] + defects[mi, ma] * \
+                            delta2 * certainty, 
+                            0, 1
+                        )
+                    elif defects[u, v] > 0 and genome[u, v] <= 0.5:
+                        mi = min(u, k)
+                        ma = max(u, k)
+                        genome[mi, ma] = np.clip(
+                            genome[mi, ma] + defects[mi, ma] * \
+                            delta2 * certainty, 
+                            0, 1
+                        )
 
-                    mi = min(v, k)
-                    ma = max(v, k)
-                    genome[mi, ma] = np.clip(
-                        genome[mi, ma] + defects[mi, ma] * delta2 * certainty,
-                        0, 1
-                    )
+                    if defects[u, v] < 0 and genome[u, v] > 0.5:
+                        mi = min(v, k)
+                        ma = max(v, k)
+                        genome[mi, ma] = np.clip(
+                            genome[mi, ma] + defects[mi, ma] * \
+                            delta2 * certainty, 
+                            0, 1
+                        )
+                    elif defects[u, v] > 0 and genome[u, v] <= 0.5:
+                        mi = min(v, k)
+                        ma = max(v, k)
+                        genome[mi, ma] = np.clip(
+                            genome[mi, ma] + defects[mi, ma] * \
+                            delta2 * certainty, 
+                            0, 1
+                        )
     genome = np.tri(NODES, NODES, -1).T * genome
     return genome, *min(trial_results, key=lambda x: x[0])
 
