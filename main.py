@@ -21,7 +21,7 @@ def construct_graph_from_genome(genome):
     return g
 
 
-def adjust(genome, delta1=0.0005, delta2=0.1):
+def adjust(genome, delta1=0.00001, delta2=0.001):
     trial_results = []
     TRIALS = 1000
     for _ in range(TRIALS):
@@ -34,7 +34,7 @@ def adjust(genome, delta1=0.0005, delta2=0.1):
     for s, g, defects in trial_results:
         up_g = np.tri(NODES, NODES, -1).T * (2 * g - 1)
         genome = np.clip(
-            genome + up_g * (1 / s) * delta1 * uncertainty, 0.0, 1.0
+            genome + up_g * (1 / s) * delta1 * uncertainty, 0.05, 0.95
         )
     for u in range(NODES):
         for v in range(u+1, NODES):
