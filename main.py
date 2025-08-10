@@ -38,21 +38,21 @@ def adjust(genome, delta1=1, delta2=1):
         genome = np.clip(
             genome + up_g * (1 / s) * delta1 * uncertainty, 0, 1
         )
-    apply = np.logical_or(
-        np.logical_and(defects < 0, genome > 0.5),
-        np.logical_and(defects > 0, genome <= 0.5)).astype(int)
-    genome = np.clip(
-        genome + apply * defects * (1 / s) * delta2 * certainty, 0, 1
-    )
-    for u, v, k in combinations(range(NODES), 3):
-        genome[u, k] = np.clip(
-            genome[u, k] + apply[u, k] * defects[u, v] * (1 / s) *
-            delta2, 0, 1
+        apply = np.logical_or(
+            np.logical_and(defects < 0, g == 1),
+            np.logical_and(defects > 0, g == 0)).astype(int)
+        genome = np.clip(
+            genome + apply * defects * (1 / s) * delta2 * certainty, 0, 1
         )
-        genome[v, k] = np.clip(
-            genome[v, k] + apply[v, k] * defects[u, v] * (1 / s) *
-            delta2, 0, 1
-        )
+        for u, v, k in combinations(range(NODES), 3):
+            genome[u, k] = np.clip(
+                genome[u, k] + apply[u, k] * defects[u, v] * (1 / s) *
+                delta2, 0, 1
+            )
+            genome[v, k] = np.clip(
+                genome[v, k] + apply[v, k] * defects[u, v] * (1 / s) *
+                delta2, 0, 1
+            )
     return genome, \
            *min(trial_results, key=lambda x: x[0])
 
@@ -71,6 +71,7 @@ def main():
             best_score = score
             best_graph = graph
             print(best_score)
+        print(genome)
     print(best_graph)
 
 
