@@ -17,20 +17,52 @@ def score(g):
 
 def construct_graph_from_genome(genome):
     g = (genome >= np.random.rand(NODES, NODES)).astype(int)
+    g = g + g.T
     return g
 
 
-def adjust(genome, delta=0.0005):
+def adjust(genome, delta1=0.0005, delta2=0.1):
     trial_results = []
     TRIALS = 1000
     for _ in range(TRIALS):
         g = construct_graph_from_genome(genome)
         s, defects = score(g)
         trial_results.append((s, g, defects))
+    pair_count = NODES * (NODES - 1) / 2
+    uncertainty = np.minimum(1 - genome, genome).sum() / pair_count
+    certainty = 1 - uncertainty
     for s, g, defects in trial_results:
         up_g = np.tri(NODES, NODES, -1).T * (2 * g - 1)
-        genome = np.clip(genome + up_g * (1 / s) * delta, 0.0, 1.0)
-        genome = np.tri(NODES, NODES, -1).T * genome
+        genome = np.clip(
+            genome + up_g * (1 / s) * delta1 * uncertainty, 0.0, 1.0
+        )
+    for u in range(NODES):
+        for v in range(u+1, NODES):
+            if v > NODES:
+                continue
+            for k in range(NODES):
+                if k == v:
+                    continue
+                elif k == u:
+                    genome[u, v] = np.clip(
+                        genome[u, v] + defects[u, v] * delta2 * certainty, 
+                        0, 1
+                    )
+                else:
+                    mi = min(u, k)
+                    ma = max(u, k)
+                    genome[mi, ma] = np.clip(
+                        genome[mi, ma] + defects[mi, ma] * delta2 * certainty, 
+                        0, 1
+                    )
+
+                    mi = min(v, k)
+                    ma = max(v, k)
+                    genome[mi, ma] = np.clip(
+                        genome[mi, ma] + defects[mi, ma] * delta2 * certainty,
+                        0, 1
+                    )
+    genome = np.tri(NODES, NODES, -1).T * genome
     return genome, *min(trial_results, key=lambda x: x[0])
 
 
